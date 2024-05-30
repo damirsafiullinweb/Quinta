@@ -11,10 +11,38 @@ namespace Quinta
         public Form1()
         {
             InitializeComponent();
+            ListBoxPlayList.DataSource = playlist;
+            ListBoxPlayList.SelectedIndexChanged += ListBoxPlayList_SelectedIndexChanged;
             _outputDevice = new WaveOutEvent();
             _timer = new System.Windows.Forms.Timer();
             _timer.Interval = 100;
             _timer.Tick += Timer_Tick;
+            this.MaximizeBox = false;
+            _outputDevice.Volume = (float)trackBarVolume.Value / trackBarVolume.Maximum;
+        }
+
+        //playlist
+        private List<string> playlist = new List<string>();
+        private void ListBoxPlayList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ListBoxPlayList.SelectedIndex != -1) // Проверка, выбран ли элемент
+            {
+                string selectedFile = ListBoxPlayList.SelectedItem.ToString();
+
+                // Остановка текущего воспроизведения, если оно есть
+                buttonStop.PerformClick();
+
+                // Открытие нового трека
+                _audioFile = new AudioFileReader(selectedFile);
+                _outputDevice.Init(_audioFile);
+                trackBarTimer.Maximum = (int)_audioFile.TotalTime.TotalMilliseconds;
+
+                labelTrackName.Text = System.IO.Path.GetFileName(selectedFile);
+
+                // Начало воспроизведения
+                buttonPause.PerformClick();
+                buttonStart.PerformClick();
+            }
         }
 
         //Timer
@@ -40,7 +68,15 @@ namespace Quinta
                 {
                     buttonStop.PerformClick();
                 }
+                buttonPause.PerformClick();
                 string selectedFile = openFileDialog.FileName;
+                if (!playlist.Contains(selectedFile))
+                {
+                    playlist.Add(selectedFile);
+                }
+
+                ListBoxPlayList.DataSource = null;
+                ListBoxPlayList.DataSource = playlist;
                 _audioFile = new AudioFileReader(selectedFile);
                 _outputDevice.Init(_audioFile);
                 trackBarTimer.Maximum = (int)_audioFile.TotalTime.TotalMilliseconds;
@@ -56,6 +92,9 @@ namespace Quinta
             {
                 _outputDevice.Play();
                 _timer.Start();
+                buttonStart.Visible = false;
+                buttonPause.Visible = true;
+
             };
         }
 
@@ -80,6 +119,8 @@ namespace Quinta
             {
                 _outputDevice.Pause();
                 _timer.Stop();
+                buttonStart.Visible = true;
+                buttonPause.Visible = false;
             }
         }
 
@@ -101,6 +142,51 @@ namespace Quinta
             if (_outputDevice != null)
             {
                 _outputDevice.Volume = (float)trackBarVolume.Value / trackBarVolume.Maximum;
+            }
+            if (trackBarVolume.Value == 0)
+            {
+                buttonVolume.Visible = false;
+                buttonVolumeMute.Visible = true;
+            }
+            else
+            {
+                buttonVolume.Visible = true;
+                buttonVolumeMute.Visible = false;
+            }
+        }
+        private void buttonVolume_Click(object sender, EventArgs e)
+        {
+            trackBarVolume.Value = 0;
+            _outputDevice.Volume = 0;
+            buttonVolume.Visible = false;
+            buttonVolumeMute.Visible = true;
+        }
+
+        private void buttonVolumeMute_Click(object sender, EventArgs e)
+        {
+            trackBarVolume.Value = 20;
+            _outputDevice.Volume = (float)trackBarVolume.Value / trackBarVolume.Maximum;
+            buttonVolume.Visible = true;
+            buttonVolumeMute.Visible = false;
+        }
+
+
+
+        private void buttonNext_Click(object sender, EventArgs e)
+        {
+            int currentIndex = ListBoxPlayList.SelectedIndex;
+            if (currentIndex < ListBoxPlayList.Items.Count - 1)
+            {
+                ListBoxPlayList.SelectedIndex = currentIndex + 1;
+            }
+        }
+
+        private void buttonPrevious_Click(object sender, EventArgs e)
+        {
+            int currentIndex = ListBoxPlayList.SelectedIndex;
+            if (currentIndex > 0)
+            {
+                ListBoxPlayList.SelectedIndex = currentIndex - 1;
             }
         }
     }
